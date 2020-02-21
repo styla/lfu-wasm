@@ -1,0 +1,19 @@
+{
+  "name": "lfu",
+  "collaborators": [
+    "Kenan Sulayman <kenan@sig.dev>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/styladev/lfu-fast"
+  },
+  "version": "1.0.1",
+  "files": [
+    "lfu_bg.wasm",
+    "lfu.js",
+    "lfu_bg.js",
+    "lfu.d.ts"
+  ],
+  "main": "lfu.js",
+  "types": "lfu.d.ts"
+}
