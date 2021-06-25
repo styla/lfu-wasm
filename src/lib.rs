@@ -37,6 +37,13 @@ impl<T: Clone + Hash + Eq + Ord> LfuInner<T> {
         }
     }
 
+    pub fn clear(&mut self) {
+        self.heap.clear();
+        self.indices.clear();
+
+        self.num_items = 0;
+    }
+
     pub fn refer(&mut self, val: T) -> Option<T> {
         let index_item =
             self.indices
@@ -206,6 +213,10 @@ impl Lfu {
         Lfu {
             lfu: LfuInner::new(capacity.try_into().unwrap()),
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.lfu.clear()
     }
 
     pub fn refer(&mut self, val: String) -> Option<String> {
