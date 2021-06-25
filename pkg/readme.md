@@ -11,11 +11,11 @@ $ make
 ### Usage
 
 ```sh
-$ yarn add lfu-fast
+$ yarn add lfu
 ```
 
 ```javascript
-const Lfu = require("lfu-fast").Lfu;
+const Lfu = require("lfu").Lfu;
 
 const lfu = new Lfu(4);
 

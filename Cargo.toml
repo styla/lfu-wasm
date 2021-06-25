@@ -1,6 +1,6 @@
 [package]
 name = "lfu"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Kenan Sulayman <kenan@sig.dev>"]
 edition = "2018"
 
