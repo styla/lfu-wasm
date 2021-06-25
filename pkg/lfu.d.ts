@@ -5,12 +5,15 @@
 export class Lfu {
   free(): void;
 /**
-* @param {number} capacity 
+* @param {number} capacity
 */
   constructor(capacity: number);
 /**
-* @param {string} val 
-* @returns {string | undefined} 
+*/
+  clear(): void;
+/**
+* @param {string} val
+* @returns {string | undefined}
 */
   refer(val: string): string | undefined;
 }

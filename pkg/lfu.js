@@ -1,5 +1,7 @@
+let imports = {};
+imports['__wbindgen_placeholder__'] = module.exports;
 let wasm;
-const { TextDecoder } = require(String.raw`util`);
+const { TextDecoder, TextEncoder } = require(String.raw`util`);
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 
@@ -19,20 +21,56 @@ function getStringFromWasm0(ptr, len) {
 
 let WASM_VECTOR_LEN = 0;
 
-let cachegetNodeBufferMemory0 = null;
-function getNodeBufferMemory0() {
-    if (cachegetNodeBufferMemory0 === null || cachegetNodeBufferMemory0.buffer !== wasm.memory.buffer) {
-        cachegetNodeBufferMemory0 = Buffer.from(wasm.memory.buffer);
-    }
-    return cachegetNodeBufferMemory0;
+let cachedTextEncoder = new TextEncoder('utf-8');
+
+const encodeString = (typeof cachedTextEncoder.encodeInto === 'function'
+    ? function (arg, view) {
+    return cachedTextEncoder.encodeInto(arg, view);
 }
+    : function (arg, view) {
+    const buf = cachedTextEncoder.encode(arg);
+    view.set(buf);
+    return {
+        read: arg.length,
+        written: buf.length
+    };
+});
 
-function passStringToWasm0(arg, malloc) {
+function passStringToWasm0(arg, malloc, realloc) {
 
-    const len = Buffer.byteLength(arg);
-    const ptr = malloc(len);
-    getNodeBufferMemory0().write(arg, ptr, len);
-    WASM_VECTOR_LEN = len;
+    if (realloc === undefined) {
+        const buf = cachedTextEncoder.encode(arg);
+        const ptr = malloc(buf.length);
+        getUint8Memory0().subarray(ptr, ptr + buf.length).set(buf);
+        WASM_VECTOR_LEN = buf.length;
+        return ptr;
+    }
+
+    let len = arg.length;
+    let ptr = malloc(len);
+
+    const mem = getUint8Memory0();
+
+    let offset = 0;
+
+    for (; offset < len; offset++) {
+        const code = arg.charCodeAt(offset);
+        if (code > 0x7F) break;
+        mem[ptr + offset] = code;
+    }
+
+    if (offset !== len) {
+        if (offset !== 0) {
+            arg = arg.slice(offset);
+        }
+        ptr = realloc(ptr, len, len = offset + arg.length * 3);
+        const view = getUint8Memory0().subarray(ptr + offset, ptr + len);
+        const ret = encodeString(arg, view);
+
+        offset += ret.written;
+    }
+
+    WASM_VECTOR_LEN = offset;
     return ptr;
 }
 
@@ -54,10 +92,15 @@ class Lfu {
         return obj;
     }
 
-    free() {
+    __destroy_into_raw() {
         const ptr = this.ptr;
         this.ptr = 0;
 
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
         wasm.__wbg_lfu_free(ptr);
     }
     /**
@@ -68,21 +111,31 @@ class Lfu {
         return Lfu.__wrap(ret);
     }
     /**
+    */
+    clear() {
+        wasm.lfu_clear(this.ptr);
+    }
+    /**
     * @param {string} val
     * @returns {string | undefined}
     */
     refer(val) {
-        var ptr0 = passStringToWasm0(val, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-        var len0 = WASM_VECTOR_LEN;
-        wasm.lfu_refer(8, this.ptr, ptr0, len0);
-        var r0 = getInt32Memory0()[8 / 4 + 0];
-        var r1 = getInt32Memory0()[8 / 4 + 1];
-        let v1;
-        if (r0 !== 0) {
-            v1 = getStringFromWasm0(r0, r1).slice();
-            wasm.__wbindgen_free(r0, r1 * 1);
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            var ptr0 = passStringToWasm0(val, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            var len0 = WASM_VECTOR_LEN;
+            wasm.lfu_refer(retptr, this.ptr, ptr0, len0);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            let v1;
+            if (r0 !== 0) {
+                v1 = getStringFromWasm0(r0, r1).slice();
+                wasm.__wbindgen_free(r0, r1 * 1);
+            }
+            return v1;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
         }
-        return v1;
     }
 }
 module.exports.Lfu = Lfu;
@@ -90,5 +143,12 @@ module.exports.Lfu = Lfu;
 module.exports.__wbindgen_throw = function(arg0, arg1) {
     throw new Error(getStringFromWasm0(arg0, arg1));
 };
-wasm = require('./lfu_bg');
+
+const path = require('path').join(__dirname, 'lfu_bg.wasm');
+const bytes = require('fs').readFileSync(path);
+
+const wasmModule = new WebAssembly.Module(bytes);
+const wasmInstance = new WebAssembly.Instance(wasmModule, imports);
+wasm = wasmInstance.exports;
+module.exports.__wasm = wasm;
 
